@@ -4,34 +4,29 @@
 # to build your own root module that invokes this module
 #####################################################################################
 
-module "ingress" {
-  source = "../.."
+module "internal_alb" {
+  source = "../../"
 
   vpc_id = "vpc-12345678"
 
-  alb_config = {
-    name         = "app-ingress"
-    internal     = false
-    subnets      = ["subnet-12345678", "subnet-23456789"]
-    lb_type      = "application"
-    enable_https = true
+  lb_config = {
+    name            = "internal-alb"
+    type            = "application"
+    internal        = true
+    subnets         = ["subnet-12345678", "subnet-23456789"]
+    certificate_arn = "arn:aws:acm:region:account:certificate/internal-cert"
   }
-
-  allowed_ingress_cidr_blocks = ["192.168.1.0/24"]
-  allowed_egress_cidr_blocks  = ["10.0.0.0/16"]
 
   target_group_configs = [
     {
-      name     = "backend-service-1"
+      name     = "internal-service-1"
       port     = 443
       protocol = "HTTPS"
-    },
-    {
-      name     = "backend-service-2"
-      port     = 80
-      protocol = "HTTP"
     }
   ]
 
-  waf_rule_group_name = "org-wide-waf-rules"
+  allowed_ingress_cidr_blocks = ["10.0.0.0/8"] # Only internal traffic allowed
+  allowed_egress_cidr_blocks  = ["10.0.0.0/8"] # Restrict outbound traffic
+
+  waf_rule_group_name = "internal-waf-rules"
 }
