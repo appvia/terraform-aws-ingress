@@ -1,19 +1,9 @@
-# Create ALB or NLB
-resource "aws_lb" "lb" {
-  name               = var.alb_config["name"]
-  internal           = var.alb_config["internal"]
-  load_balancer_type = var.alb_config["lb_type"]
-  subnets            = var.alb_config["subnets"]
-  security_groups    = concat([aws_security_group.baseline_sg.id], var.extra_security_groups)
-  tags               = var.tags
-}
-
-# Secure baseline security group
+# Secure baseline security group (Only for ALB)
 resource "aws_security_group" "baseline_sg" {
-  name   = "${var.alb_config["name"]}-baseline-sg"
+  name   = "${var.lb_config.name}-baseline-sg"
   vpc_id = var.vpc_id
 
-  description = "Baseline security group for ingress ALB/NLB"
+  description = "Baseline security group for ingress ALB"
 
   ingress {
     description = "Allow inbound HTTPS traffic"
@@ -32,11 +22,51 @@ resource "aws_security_group" "baseline_sg" {
   }
 
   tags = merge(var.tags, {
-    "Name" = "${var.alb_config["name"]}-baseline-sg"
+    "Name" = "${var.lb_config.name}-baseline-sg"
   })
 }
 
-# Create backend target groups dynamically
+# Create ALB or NLB
+resource "aws_lb" "lb" {
+  name               = var.lb_config.name
+  internal           = var.lb_config.internal
+  load_balancer_type = var.lb_config.type
+  subnets            = var.lb_config.subnets
+  security_groups    = concat([aws_security_group.baseline_sg[0].id], var.extra_security_groups)
+  tags               = var.tags
+}
+
+# Create HTTPS listeners dynamically for ALB
+resource "aws_lb_listener" "https_listeners" {
+  for_each = { for tg in var.target_group_configs : tg.name => tg if var.lb_config.type == "application" && tg.protocol == "HTTPS" }
+
+  load_balancer_arn = aws_lb.lb.arn
+  port              = each.value.port
+  protocol          = "HTTPS"
+  ssl_policy        = var.lb_config.ssl_policy
+  certificate_arn   = var.lb_config.certificate_arn
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backend[each.key].arn
+  }
+}
+
+# Create TCP listeners dynamically for NLB
+resource "aws_lb_listener" "tcp_listeners" {
+  for_each = { for tg in var.target_group_configs : tg.name => tg if var.lb_config.type == "network" && tg.protocol == "TCP" }
+
+  load_balancer_arn = aws_lb.lb.arn
+  port              = each.value.port
+  protocol          = "TCP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backend[each.key].arn
+  }
+}
+
+# Create target groups dynamically
 resource "aws_lb_target_group" "backend" {
   for_each = { for tg in var.target_group_configs : tg.name => tg }
 
@@ -46,30 +76,21 @@ resource "aws_lb_target_group" "backend" {
   vpc_id   = var.vpc_id
 
   health_check {
-    protocol = each.value.protocol
-    port     = each.value.port
-    path     = each.value.protocol == "HTTPS" || each.value.protocol == "HTTP" ? "/" : null
+    protocol            = each.value.protocol == "HTTPS" && var.lb_config.type == "application" ? "HTTPS" : "TCP"
+    port                = each.value.port
+    path                = each.value.protocol == "HTTPS" ? "/health" : null
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
   }
 
   tags = var.tags
 }
 
-# Create dynamic listeners for each target group
-resource "aws_lb_listener" "dynamic_listeners" {
-  for_each = { for tg in var.target_group_configs : tg.name => tg }
-
-  load_balancer_arn = aws_lb.lb.arn
-  port              = each.value.port
-  protocol          = each.value.protocol
-
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.backend[each.key].arn
-  }
-}
-
-# Associate WAF if an ARN is provided
+# Associate WAF (Only for ALB)
 resource "aws_wafv2_web_acl_association" "alb_waf_assoc" {
+  count        = var.lb_config.type == "application" ? 1 : 0
   resource_arn = aws_lb.lb.arn
   web_acl_arn  = data.aws_wafv2_rule_group.shared_waf_rule_group.arn
 }

@@ -12,20 +12,19 @@ variable "tags" {
 }
 
 # Load Balancer configuration map
-variable "alb_config" {
+variable "lb_config" {
   description = "Configuration settings for the ALB/NLB"
   type = object({
     name            = string
+    type            = string # "application" (ALB) or "network" (NLB)
     internal        = bool
     subnets         = list(string)
-    lb_type         = string
-    enable_https    = optional(bool, true)
     certificate_arn = optional(string, "")
     ssl_policy      = optional(string, "ELBSecurityPolicy-TLS13-1-2-2021-06")
   })
 
   validation {
-    condition     = contains(["application", "network"], var.alb_config.lb_type)
+    condition     = contains(["application", "network"], var.lb_config.type)
     error_message = "lb_type must be either 'application' (ALB) or 'network' (NLB)."
   }
 }
@@ -34,14 +33,12 @@ variable "alb_config" {
 variable "allowed_ingress_cidr_blocks" {
   description = "List of CIDR blocks allowed for inbound HTTPS traffic"
   type        = list(string)
-  default     = ["0.0.0.0/0"]
 }
 
 # Allowed CIDR blocks for egress traffic
 variable "allowed_egress_cidr_blocks" {
   description = "List of CIDR blocks allowed for outbound traffic"
   type        = list(string)
-  default     = ["10.0.0.0/8"]
 }
 
 # Additional security groups to attach to the ALB/NLB
