@@ -23,11 +23,6 @@ output "target_group_names" {
   value       = { for tg in aws_lb_target_group.backend : tg.name => tg.name }
 }
 
-output "waf_web_acl_arn" {
-  description = "The associated WAF Web ACL ARN (if applied)"
-  value       = var.waf_rule_group_name != "" ? aws_wafv2_web_acl_association.alb_waf_assoc[0].web_acl_arn : null
-}
-
 output "security_group_id" {
   description = "The security group ID assigned to the ALB/NLB"
   value       = aws_security_group.baseline_sg.id
