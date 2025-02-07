@@ -32,7 +32,7 @@ resource "aws_lb" "lb" {
   internal           = var.lb_config.internal
   load_balancer_type = var.lb_config.type
   subnets            = var.lb_config.subnets
-  security_groups    = concat([aws_security_group.baseline_sg[0].id], var.extra_security_groups)
+  security_groups    = concat([aws_security_group.baseline_sg.id], var.extra_security_groups)
   tags               = var.tags
 }
 
