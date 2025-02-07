@@ -28,12 +28,13 @@ resource "aws_security_group" "baseline_sg" {
 
 # Create ALB or NLB
 resource "aws_lb" "lb" {
-  name               = var.lb_config.name
-  internal           = var.lb_config.internal
-  load_balancer_type = var.lb_config.type
-  subnets            = var.lb_config.subnets
-  security_groups    = concat([aws_security_group.baseline_sg.id], var.extra_security_groups)
-  tags               = var.tags
+  name                       = var.lb_config.name
+  internal                   = var.lb_config.internal
+  load_balancer_type         = var.lb_config.type
+  subnets                    = var.lb_config.subnets
+  security_groups            = concat([aws_security_group.baseline_sg.id], var.extra_security_groups)
+  drop_invalid_header_fields = var.lb_config.type == "application" ? true : null
+  tags                       = var.tags
 }
 
 # Create HTTPS listeners dynamically for ALB
