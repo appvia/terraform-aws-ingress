@@ -71,6 +71,7 @@ variable "backends" {
 variable "certificate_arn" {
   description = "The certificate ARN for the Load Balancer (optional, required for ALB with HTTPS)"
   type        = string
+  default     = null
 }
 
 variable "enable_https_redirect" {
