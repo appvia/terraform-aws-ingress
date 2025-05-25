@@ -17,13 +17,13 @@ variable "backends" {
   description = "List of target groups forwarding traffic to backend instances or services"
   type = map(object({
     ## The port on which the target group listens
-    port = number
+    port = optional(number, 80)
     ## The priority of the target group (lower numbers have higher priority)
     priority = number
     ## The health check configuration for the target group
     health = object({
       ## Port for health checks (default is the target group port)
-      port = optional(string, null)
+      port = optional(string, 80)
       ## Interval in seconds between health checks
       interval = optional(number, 30)
       ## Timeout in seconds for each health check
