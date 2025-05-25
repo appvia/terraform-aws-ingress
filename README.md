@@ -52,10 +52,10 @@ The `terraform-docs` utility is used to generate this README. Follow the below s
 
 | Name | Description |
 |------|-------------|
-| <a name="output_alb_arn"></a> [alb\_arn](#output\_alb\_arn) | The ARN of the ALB/NLB |
-| <a name="output_alb_dns_name"></a> [alb\_dns\_name](#output\_alb\_dns\_name) | The DNS name of the ALB/NLB |
-| <a name="output_alb_zone_id"></a> [alb\_zone\_id](#output\_alb\_zone\_id) | The Zone ID of the ALB/NLB (useful for Route 53 alias records) |
+| <a name="output_arn"></a> [arn](#output\_arn) | The ARN of the load balancer |
+| <a name="output_dns_name"></a> [dns\_name](#output\_dns\_name) | The DNS name of the load balancer |
 | <a name="output_security_group_id"></a> [security\_group\_id](#output\_security\_group\_id) | The security group ID assigned to the load balancer |
 | <a name="output_target_group_arns"></a> [target\_group\_arns](#output\_target\_group\_arns) | A map of Target Group ARNs |
 | <a name="output_target_group_names"></a> [target\_group\_names](#output\_target\_group\_names) | A map of Target Group names |
+| <a name="output_zone_id"></a> [zone\_id](#output\_zone\_id) | The Zone ID of the load\_balancer (useful for Route 53 alias records) |
 <!-- END_TF_DOCS -->

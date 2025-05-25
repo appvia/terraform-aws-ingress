@@ -1,15 +1,15 @@
-output "alb_arn" {
-  description = "The ARN of the ALB/NLB"
+output "arn" {
+  description = "The ARN of the load balancer"
   value       = aws_lb.load_balancer.arn
 }
 
-output "alb_dns_name" {
-  description = "The DNS name of the ALB/NLB"
+output "dns_name" {
+  description = "The DNS name of the load balancer"
   value       = aws_lb.load_balancer.dns_name
 }
 
-output "alb_zone_id" {
-  description = "The Zone ID of the ALB/NLB (useful for Route 53 alias records)"
+output "zone_id" {
+  description = "The Zone ID of the load_balancer (useful for Route 53 alias records)"
   value       = aws_lb.load_balancer.zone_id
 }
 
