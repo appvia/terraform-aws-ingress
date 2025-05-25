@@ -1,12 +1,21 @@
 # Secure baseline security group (Only for ALB)
+# tfsec:ignore:aws-ec2-no-public-ingress-sgr
 resource "aws_security_group" "baseline_sg" {
-  name   = "${var.lb_config.name}-baseline-sg"
-  vpc_id = var.vpc_id
-
-  description = "Baseline security group for ingress ALB"
+  name        = var.name
+  description = "Baseline security group for ingress load balancer traffic"
+  tags        = merge(var.tags, { "Name" = var.name })
+  vpc_id      = var.vpc_id
 
   ingress {
-    description = "Allow inbound HTTPS traffic"
+    description = "Allow inbound HTTP traffic to the load balancer: ${var.name}"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = var.allowed_ingress_cidr_blocks
+  }
+
+  ingress {
+    description = "Allow inbound HTTPS traffic to the load balancer: ${var.name}"
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
@@ -14,84 +23,138 @@ resource "aws_security_group" "baseline_sg" {
   }
 
   egress {
-    description = "Allow outbound traffic to workload subnets"
+    description = "Allow outbound traffic to workload subnets from the load balancer: ${var.name}"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = var.allowed_egress_cidr_blocks
   }
-
-  tags = merge(var.tags, {
-    "Name" = "${var.lb_config.name}-baseline-sg"
-  })
 }
 
-# Create ALB or NLB
-resource "aws_lb" "lb" {
-  name                       = var.lb_config.name
-  internal                   = var.lb_config.internal
-  load_balancer_type         = var.lb_config.type
-  subnets                    = var.lb_config.subnets
+## Provision the load balancer (ALB or NLB) based on the configuration
+resource "aws_lb" "load_balancer" {
+  name                       = var.name
+  drop_invalid_header_fields = true
+  internal                   = false
+  load_balancer_type         = "application"
   security_groups            = concat([aws_security_group.baseline_sg.id], var.extra_security_groups)
-  drop_invalid_header_fields = var.lb_config.type == "application" ? true : null
+  subnets                    = var.subnet_ids
   tags                       = var.tags
 }
 
-# Create HTTPS listeners dynamically for ALB
-resource "aws_lb_listener" "https_listeners" {
-  for_each = { for tg in var.target_group_configs : tg.name => tg if var.lb_config.type == "application" && tg.protocol == "HTTPS" }
+## Provision the target groups for the backends
+resource "aws_lb_target_group" "backends" {
+  for_each = var.backends
 
-  load_balancer_arn = aws_lb.lb.arn
-  port              = each.value.port
-  protocol          = "HTTPS"
-  ssl_policy        = var.lb_config.ssl_policy
-  certificate_arn   = var.lb_config.certificate_arn
-
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.backend[each.key].arn
-  }
-}
-
-# Create TCP listeners dynamically for NLB
-resource "aws_lb_listener" "tcp_listeners" {
-  for_each = { for tg in var.target_group_configs : tg.name => tg if var.lb_config.type == "network" && tg.protocol == "TCP" }
-
-  load_balancer_arn = aws_lb.lb.arn
-  port              = each.value.port
-  protocol          = "TCP"
-
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.backend[each.key].arn
-  }
-}
-
-# Create target groups dynamically
-resource "aws_lb_target_group" "backend" {
-  for_each = { for tg in var.target_group_configs : tg.name => tg }
-
-  name     = each.value.name
+  name     = each.key
   port     = each.value.port
-  protocol = each.value.protocol
+  protocol = "TCP"
+  tags     = var.tags
   vpc_id   = var.vpc_id
 
   health_check {
-    protocol            = each.value.protocol == "HTTPS" && var.lb_config.type == "application" ? "HTTPS" : "TCP"
-    port                = each.value.port
-    path                = each.value.protocol == "HTTPS" ? "/health" : null
-    interval            = 30
-    timeout             = 5
-    healthy_threshold   = 2
-    unhealthy_threshold = 3
+    protocol            = "TCP"
+    port                = each.value.health.port
+    interval            = each.value.health.interval
+    timeout             = each.value.health.timeout
+    healthy_threshold   = each.value.health.healthy_threshold
+    unhealthy_threshold = each.value.health.unhealthy_threshold
   }
-
-  tags = var.tags
 }
 
-# Associate WAF (Only for ALB)
-resource "aws_wafv2_web_acl_association" "alb_waf_assoc" {
-  count        = var.lb_config.type == "application" ? 1 : 0
-  resource_arn = aws_lb.lb.arn
-  web_acl_arn  = data.aws_wafv2_rule_group.shared_waf_rule_group.arn
+## Associate the static IPs with the backend target groups
+resource "aws_lb_target_group_attachment" "targets" {
+  for_each = local.targets
+
+  target_group_arn = aws_lb_target_group.backends[each.value.key].arn
+  target_id        = each.value.id
+  port             = each.value.port
+}
+
+## Provision a HTTP listener and redirect to HTTPS
+resource "aws_lb_listener" "http_listener" {
+  load_balancer_arn = aws_lb.load_balancer.arn
+  port              = var.http_port
+  protocol          = "HTTP"
+  tags              = var.tags
+
+  default_action {
+    type = "redirect"
+    redirect {
+      host        = "#{host}"
+      path        = "/#{path}"
+      port        = "443"
+      protocol    = "HTTPS"
+      query       = "#{query}"
+      status_code = "HTTP_301"
+    }
+  }
+}
+
+## Provision TCP listeners for the load balancer (NLB)
+resource "aws_lb_listener" "https_listener" {
+  load_balancer_arn = aws_lb.load_balancer.arn
+  port              = var.https_port
+  protocol          = "HTTPS"
+  ssl_policy        = var.ssl_policy
+  certificate_arn   = var.certificate_arn
+  tags              = var.tags
+
+  ## Default action is to 403
+  default_action {
+    type = "fixed-response"
+    fixed_response {
+      content_type = "text/plain"
+      message_body = "Access Denied"
+      status_code  = "403"
+    }
+  }
+}
+
+## Provision the rules for the HTTPS listener
+resource "aws_lb_listener_rule" "https_listener_rules" {
+  for_each = var.backends
+
+  listener_arn = aws_lb_listener.https_listener.arn
+  priority     = each.value.priority
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backends[each.key].arn
+  }
+
+  condition {
+    dynamic "host_header" {
+      for_each = each.value.condition.host_headers != null ? each.value.condition.host_headers : []
+
+      content {
+        values = host_header.values
+      }
+    }
+
+    dynamic "path_pattern" {
+      for_each = each.value.condition.path_patterns != null ? each.value.condition.path_patterns.values : []
+
+      content {
+        values = path_pattern.values
+      }
+    }
+
+    dynamic "http_header" {
+      for_each = each.value.condition.http_header != null ? each.value.condition.http_header : []
+
+      content {
+        http_header_name = http_header.name
+        values           = http_header.values
+      }
+    }
+
+    dynamic "source_ip" {
+      for_each = each.value.condition.source_ips != null ? each.value.condition.source_ip : []
+
+      content {
+        values = source_ip.values
+      }
+    }
+  }
 }
