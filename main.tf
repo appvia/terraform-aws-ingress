@@ -50,13 +50,14 @@ resource "aws_lb_target_group" "backends" {
 
   name        = each.key
   port        = each.value.port
-  protocol    = "TCP"
+  protocol    = each.value.protocol
   tags        = var.tags
-  target_type = "ip"
+  target_type = each.value.target_type
   vpc_id      = var.vpc_id
 
   health_check {
-    protocol            = "TCP"
+    protocol            = each.value.health.protocol
+    path                = each.value.health.path
     port                = each.value.health.port
     interval            = each.value.health.interval
     timeout             = each.value.health.timeout

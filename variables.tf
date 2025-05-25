@@ -20,10 +20,18 @@ variable "backends" {
     port = optional(number, 80)
     ## The priority of the target group (lower numbers have higher priority)
     priority = number
+    ## The protocol used by the target group (default is HTTP)
+    protocol = optional(string, "HTTP")
+    ## The target type for the target group (default is 'ip')
+    target_type = optional(string, "ip")
     ## The health check configuration for the target group
     health = object({
+      ## Path to check for health (default is "/")
+      path = optional(string, "/")
       ## Port for health checks (default is the target group port)
       port = optional(string, 80)
+      ## Protocol for health checks (default is HTTP)
+      protocol = optional(string, "HTTP")
       ## Interval in seconds between health checks
       interval = optional(number, 30)
       ## Timeout in seconds for each health check
