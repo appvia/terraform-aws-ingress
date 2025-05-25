@@ -4,29 +4,49 @@
 # to build your own root module that invokes this module
 #####################################################################################
 
-module "internal_alb" {
+module "lb" {
   source = "../../"
 
-  vpc_id = "vpc-12345678"
+  name                        = "ingress-alb"
+  allowed_egress_cidr_blocks  = ["10.0.0.0/8"]
+  allowed_ingress_cidr_blocks = ["0.0.0.0/8"]
+  certificate_arn             = "arn:aws:acm:us-east-1:123456789012:certificate/abcd1234-5678-90ab-cdef-EXAMPLE11111"
+  subnet_ids                  = ["subnet-12345678", "subnet-23456789"]
+  tags                        = {}
+  vpc_id                      = "vpc-12345678"
+  waf_rule_group_name         = "internal-waf-rules"
 
-  lb_config = {
-    name            = "internal-alb"
-    type            = "application"
-    internal        = true
-    subnets         = ["subnet-12345678", "subnet-23456789"]
-    certificate_arn = "arn:aws:acm:region:account:certificate/internal-cert"
+  backends = {
+    "web" = {
+      port     = 80
+      priority = 1
+
+      health = {
+        port                = 8080
+        interval            = 30
+        timeout             = 5
+        healthy_threshold   = 3
+        unhealthy_threshold = 3
+      }
+
+      condition = {
+        host_header = {
+          values = ["web.example.com", "*.web.example.com"]
+        }
+      }
+
+      targets = [
+        {
+          availablity_zone = "us-east-1a"
+          id               = "10.32.0.11"
+          port             = 8080
+        },
+        {
+          availablity_zone = "us-east-1b"
+          id               = "10.23.0.10"
+          port             = 8080
+        }
+      ]
+    },
   }
-
-  target_group_configs = [
-    {
-      name     = "internal-service-1"
-      port     = 443
-      protocol = "HTTPS"
-    }
-  ]
-
-  allowed_ingress_cidr_blocks = ["10.0.0.0/8"] # Only internal traffic allowed
-  allowed_egress_cidr_blocks  = ["10.0.0.0/8"] # Restrict outbound traffic
-
-  waf_rule_group_name = "internal-waf-rules"
 }

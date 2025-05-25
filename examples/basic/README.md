@@ -9,5 +9,7 @@ No inputs.
 
 ## Outputs
 
-No outputs.
+| Name | Description |
+|------|-------------|
+| <a name="output_targets"></a> [targets](#output\_targets) | A list of backend targets with their details |
 <!-- END_TF_DOCS -->
