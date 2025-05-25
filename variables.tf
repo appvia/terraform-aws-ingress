@@ -36,30 +36,32 @@ variable "backends" {
     ## A list of conditions to match this target group
     condition = object({
       ## The type of condition (e.g., path, host header)
-      host_headers = optional(object({
+      host_header = optional(object({
         ## A list of host header values to match (e.g., example.com, *.example.com)
         values = list(string)
       }), null)
       ## A list of HTTP header conditions
-      http_header = optional(list(object({
+      http_header = optional(object({
         ## The name of the HTTP header to match
         name = string
         ## The value to match against the header
         values = list(string)
-      })), null)
+      }), null)
       ## A list of path patterns to match (e.g., /api/*)
-      path_patterns = optional(object({
+      path_pattern = optional(object({
         ## A list of path patterns to match
         values = list(string)
       }), null)
       ## A list of source IP conditions
-      source_ips = optional(object({
+      source_ip = optional(object({
         ## The CIDR block to match (e.g. 10.0.0/16)
         values = list(string)
       }), null)
     })
     ## Addresses of the backend instances or services
     targets = list(object({
+      ## The availablity zone of the target, required as the ip is outside of the VPC
+      availablity_zone = string
       ## ID of the target (e.g., instance ID, IP address)
       id = string
       ## Port on which the target is listening
@@ -71,7 +73,12 @@ variable "backends" {
 variable "certificate_arn" {
   description = "The certificate ARN for the Load Balancer (optional, required for ALB with HTTPS)"
   type        = string
-  default     = null
+}
+
+variable "client_keepalive" {
+  description = "The time in seconds to keep the connection alive for clients (default is 3600 seconds)"
+  type        = number
+  default     = 3600
 }
 
 variable "enable_https_redirect" {

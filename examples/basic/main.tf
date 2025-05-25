@@ -4,13 +4,13 @@
 # to build your own root module that invokes this module
 #####################################################################################
 
-module "internal_alb" {
+module "lb" {
   source = "../../"
 
   name                        = "ingress-alb"
   allowed_egress_cidr_blocks  = ["10.0.0.0/8"]
   allowed_ingress_cidr_blocks = ["0.0.0.0/8"]
-  certificate_arn             = "arn:aws:acm:region:account:certificate/internal-cert"
+  certificate_arn             = "arn:aws:acm:us-east-1:123456789012:certificate/abcd1234-5678-90ab-cdef-EXAMPLE11111"
   subnet_ids                  = ["subnet-12345678", "subnet-23456789"]
   tags                        = {}
   vpc_id                      = "vpc-12345678"
@@ -30,19 +30,21 @@ module "internal_alb" {
       }
 
       condition = {
-        host_headers = {
+        host_header = {
           values = ["web.example.com", "*.web.example.com"]
         }
       }
 
       targets = [
         {
-          id   = "10.32.0.11"
-          port = 8080
+          availablity_zone = "us-east-1a"
+          id               = "10.32.0.11"
+          port             = 8080
         },
         {
-          id   = "10.23.0.10"
-          port = 8080
+          availablity_zone = "us-east-1b"
+          id               = "10.23.0.10"
+          port             = 8080
         }
       ]
     },

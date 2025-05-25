@@ -32,8 +32,10 @@ resource "aws_security_group" "baseline_sg" {
 }
 
 ## Provision the load balancer (ALB or NLB) based on the configuration
+# tfsec:ignore:aws-elb-alb-not-public
 resource "aws_lb" "load_balancer" {
   name                       = var.name
+  client_keep_alive          = var.client_keepalive
   drop_invalid_header_fields = true
   internal                   = false
   load_balancer_type         = "application"
@@ -46,11 +48,12 @@ resource "aws_lb" "load_balancer" {
 resource "aws_lb_target_group" "backends" {
   for_each = var.backends
 
-  name     = each.key
-  port     = each.value.port
-  protocol = "TCP"
-  tags     = var.tags
-  vpc_id   = var.vpc_id
+  name        = each.key
+  port        = each.value.port
+  protocol    = "TCP"
+  tags        = var.tags
+  target_type = "ip"
+  vpc_id      = var.vpc_id
 
   health_check {
     protocol            = "TCP"
@@ -66,9 +69,10 @@ resource "aws_lb_target_group" "backends" {
 resource "aws_lb_target_group_attachment" "targets" {
   for_each = local.targets
 
-  target_group_arn = aws_lb_target_group.backends[each.value.key].arn
-  target_id        = each.value.id
-  port             = each.value.port
+  availability_zone = each.value.availability_zone
+  target_group_arn  = aws_lb_target_group.backends[each.value.backend].arn
+  target_id         = each.value.id
+  port              = each.value.port
 }
 
 ## Provision a HTTP listener and redirect to HTTPS
@@ -127,15 +131,15 @@ resource "aws_lb_listener_rule" "https_listener_rules" {
 
   condition {
     dynamic "host_header" {
-      for_each = each.value.condition.host_headers != null ? each.value.condition.host_headers : []
+      for_each = each.value.condition.host_header != null ? each.value.condition.host_header : {}
 
       content {
-        values = host_header.values
+        values = host_headers.values
       }
     }
 
     dynamic "path_pattern" {
-      for_each = each.value.condition.path_patterns != null ? each.value.condition.path_patterns.values : []
+      for_each = each.value.condition.path_pattern != null ? each.value.condition.path_pattern : {}
 
       content {
         values = path_pattern.values
@@ -143,16 +147,16 @@ resource "aws_lb_listener_rule" "https_listener_rules" {
     }
 
     dynamic "http_header" {
-      for_each = each.value.condition.http_header != null ? each.value.condition.http_header : []
+      for_each = each.value.condition.http_header != null ? [1] : toset([])
 
       content {
-        http_header_name = http_header.name
-        values           = http_header.values
+        http_header_name = each.value.condition.http_header.name
+        values           = each.value.condition.http_header.values
       }
     }
 
     dynamic "source_ip" {
-      for_each = each.value.condition.source_ips != null ? each.value.condition.source_ip : []
+      for_each = each.value.condition.source_ip != null ? each.value.condition.source_ip : {}
 
       content {
         values = source_ip.values

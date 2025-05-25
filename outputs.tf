@@ -27,3 +27,8 @@ output "security_group_id" {
   description = "The security group ID assigned to the load balancer"
   value       = aws_security_group.baseline_sg.id
 }
+
+output "targets" {
+  description = "A list of backend targets with their details"
+  value       = local.targets
+}
