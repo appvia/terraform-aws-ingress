@@ -1,34 +1,8 @@
 # The VPC where the ALB/NLB is deployed
-variable "vpc_id" {
-  description = "The ID of the VPC where the ALB/NLB will be deployed"
-  type        = string
-}
-
-# Global Tags
-variable "tags" {
-  description = "Tags to apply to all resources"
-  type        = map(string)
-}
-
-variable "name" {
-  description = "Is the name of the load balancer"
-  type        = string
-}
-
-variable "subnet_ids" {
-  description = "List of subnets where the Load Balancer will be deployed"
+variable "allowed_egress_cidr_blocks" {
+  description = "List of CIDR blocks allowed for outbound traffic"
   type        = list(string)
-}
-
-variable "certificate_arn" {
-  description = "The certificate ARN for the Load Balancer (optional, required for ALB with HTTPS)"
-  type        = string
-}
-
-variable "ssl_policy" {
-  description = "The SSL policy for the Load Balancer (optional, defaults to a secure policy)"
-  type        = string
-  default     = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  default     = ["10.0.0.0/8"]
 }
 
 # Allowed CIDR blocks for ingress traffic
@@ -36,32 +10,6 @@ variable "allowed_ingress_cidr_blocks" {
   description = "List of CIDR blocks allowed for inbound HTTPS traffic"
   type        = list(string)
   default     = ["0.0.0.0/0"]
-}
-
-# Allowed CIDR blocks for egress traffic
-variable "allowed_egress_cidr_blocks" {
-  description = "List of CIDR blocks allowed for outbound traffic"
-  type        = list(string)
-  default     = ["10.0.0.0/8"]
-}
-
-variable "http_port" {
-  description = "The port for HTTP traffic (default is 80)"
-  type        = number
-  default     = 80
-}
-
-variable "https_port" {
-  description = "The port for HTTPS traffic (default is 443)"
-  type        = number
-  default     = 443
-}
-
-# Additional security groups to attach to the ALB/NLB
-variable "extra_security_groups" {
-  description = "List of additional security groups to attach to the ALB/NLB"
-  type        = list(string)
-  default     = []
 }
 
 # Target Groups configuration map for Worload Account NLBs/ALBs
@@ -118,6 +66,62 @@ variable "backends" {
       port = number
     }))
   }))
+}
+
+variable "certificate_arn" {
+  description = "The certificate ARN for the Load Balancer (optional, required for ALB with HTTPS)"
+  type        = string
+}
+
+variable "enable_https_redirect" {
+  description = "Enable HTTP to HTTPS redirection (default is true)"
+  type        = bool
+  default     = true
+}
+
+variable "extra_security_groups" {
+  description = "List of additional security groups to attach to the ALB/NLB"
+  type        = list(string)
+  default     = []
+}
+
+variable "http_port" {
+  description = "The port for HTTP traffic (default is 80)"
+  type        = number
+  default     = 80
+}
+
+variable "https_port" {
+  description = "The port for HTTPS traffic (default is 443)"
+  type        = number
+  default     = 443
+}
+
+variable "name" {
+  description = "Is the name of the load balancer"
+  type        = string
+}
+
+variable "ssl_policy" {
+  description = "The SSL policy for the Load Balancer (optional, defaults to a secure policy)"
+  type        = string
+  default     = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+}
+
+variable "subnet_ids" {
+  description = "List of subnets where the Load Balancer will be deployed"
+  type        = list(string)
+}
+
+# Global Tags
+variable "tags" {
+  description = "Tags to apply to all resources"
+  type        = map(string)
+}
+
+variable "vpc_id" {
+  description = "The ID of the VPC where the ALB/NLB will be deployed"
+  type        = string
 }
 
 # Name of the AWS WAF Rule Group to attach to the ALB

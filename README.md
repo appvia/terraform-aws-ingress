@@ -41,6 +41,7 @@ The `terraform-docs` utility is used to generate this README. Follow the below s
 | <a name="input_vpc_id"></a> [vpc\_id](#input\_vpc\_id) | The ID of the VPC where the ALB/NLB will be deployed | `string` | n/a | yes |
 | <a name="input_allowed_egress_cidr_blocks"></a> [allowed\_egress\_cidr\_blocks](#input\_allowed\_egress\_cidr\_blocks) | List of CIDR blocks allowed for outbound traffic | `list(string)` | <pre>[<br/>  "10.0.0.0/8"<br/>]</pre> | no |
 | <a name="input_allowed_ingress_cidr_blocks"></a> [allowed\_ingress\_cidr\_blocks](#input\_allowed\_ingress\_cidr\_blocks) | List of CIDR blocks allowed for inbound HTTPS traffic | `list(string)` | <pre>[<br/>  "0.0.0.0/0"<br/>]</pre> | no |
+| <a name="input_enable_https_redirect"></a> [enable\_https\_redirect](#input\_enable\_https\_redirect) | Enable HTTP to HTTPS redirection (default is true) | `bool` | `true` | no |
 | <a name="input_extra_security_groups"></a> [extra\_security\_groups](#input\_extra\_security\_groups) | List of additional security groups to attach to the ALB/NLB | `list(string)` | `[]` | no |
 | <a name="input_http_port"></a> [http\_port](#input\_http\_port) | The port for HTTP traffic (default is 80) | `number` | `80` | no |
 | <a name="input_https_port"></a> [https\_port](#input\_https\_port) | The port for HTTPS traffic (default is 443) | `number` | `443` | no |

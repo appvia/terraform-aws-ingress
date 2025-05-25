@@ -73,6 +73,8 @@ resource "aws_lb_target_group_attachment" "targets" {
 
 ## Provision a HTTP listener and redirect to HTTPS
 resource "aws_lb_listener" "http_listener" {
+  count = var.enable_https_redirect ? 1 : 0
+
   load_balancer_arn = aws_lb.load_balancer.arn
   port              = var.http_port
   protocol          = "HTTP"
