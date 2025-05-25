@@ -123,6 +123,7 @@ resource "aws_lb_listener_rule" "https_listener_rules" {
 
   listener_arn = aws_lb_listener.https_listener.arn
   priority     = each.value.priority
+  tags         = var.tags
 
   action {
     type             = "forward"
@@ -134,7 +135,7 @@ resource "aws_lb_listener_rule" "https_listener_rules" {
       for_each = each.value.condition.host_header != null ? each.value.condition.host_header : {}
 
       content {
-        values = host_headers.values
+        values = host_header.value
       }
     }
 
@@ -142,7 +143,7 @@ resource "aws_lb_listener_rule" "https_listener_rules" {
       for_each = each.value.condition.path_pattern != null ? each.value.condition.path_pattern : {}
 
       content {
-        values = path_pattern.values
+        values = path_pattern.value
       }
     }
 
@@ -159,7 +160,7 @@ resource "aws_lb_listener_rule" "https_listener_rules" {
       for_each = each.value.condition.source_ip != null ? each.value.condition.source_ip : {}
 
       content {
-        values = source_ip.values
+        values = source_ip.value
       }
     }
   }
